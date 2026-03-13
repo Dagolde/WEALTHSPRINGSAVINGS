@@ -1,0 +1,215 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14-alpine
+    container_name: ajo_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: rotational_contribution
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d rotational_contribution"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ajo_network
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: ajo_redis
+    command: redis-server --requirepass password
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - ajo_network
+
+  # Laravel Backend
+  laravel:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ajo_laravel
+    ports:
+      - "8002:8000"
+    environment:
+      - APP_ENV=development
+      - APP_DEBUG=true
+      - APP_KEY=base64:6/GzQuuxRMwOAqmJI37JwkSMmaOGceBWQ/3EuYMW830=
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=rotational_contribution
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=password
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=password
+      - REDIS_PORT=6379
+      - CACHE_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+      - SESSION_DRIVER=redis
+    volumes:
+      - ./backend:/var/www/html
+      - laravel_storage:/var/www/html/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ajo_network
+
+  # Laravel Queue Worker
+  laravel_queue:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ajo_laravel_queue
+    environment:
+      - APP_ENV=development
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=rotational_contribution
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=password
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=password
+      - REDIS_PORT=6379
+      - QUEUE_CONNECTION=redis
+    volumes:
+      - ./backend:/var/www/html
+    depends_on:
+      - postgres
+      - redis
+      - laravel
+    networks:
+      - ajo_network
+    command: php artisan queue:work --tries=3 --timeout=90
+
+  # FastAPI Microservices
+  fastapi:
+    build:
+      context: ./microservices
+      dockerfile: Dockerfile
+    container_name: ajo_fastapi
+    ports:
+      - "8003:8001"
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/rotational_contribution
+      - REDIS_URL=redis://:password@redis:6379/0
+      - REDIS_CACHE_DB=1
+      - REDIS_CELERY_BROKER_DB=2
+      - REDIS_CELERY_BACKEND_DB=3
+      - CELERY_BROKER_URL=redis://:password@redis:6379/2
+      - CELERY_RESULT_BACKEND=redis://:password@redis:6379/3
+      - LARAVEL_API_URL=http://laravel:8000
+    volumes:
+      - ./microservices:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ajo_network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+
+  # Celery Worker
+  celery_worker:
+    build:
+      context: ./microservices
+      dockerfile: Dockerfile
+    container_name: ajo_celery_worker
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/rotational_contribution
+      - REDIS_URL=redis://:password@redis:6379/0
+      - CELERY_BROKER_URL=redis://:password@redis:6379/2
+      - CELERY_RESULT_BACKEND=redis://:password@redis:6379/3
+      - LARAVEL_API_URL=http://laravel:8000
+    volumes:
+      - ./microservices:/app
+    depends_on:
+      - postgres
+      - redis
+      - fastapi
+    networks:
+      - ajo_network
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=4
+
+  # Celery Beat (Scheduler)
+  celery_beat:
+    build:
+      context: ./microservices
+      dockerfile: Dockerfile
+    container_name: ajo_celery_beat
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/rotational_contribution
+      - REDIS_URL=redis://:password@redis:6379/0
+      - CELERY_BROKER_URL=redis://:password@redis:6379/2
+      - CELERY_RESULT_BACKEND=redis://:password@redis:6379/3
+      - LARAVEL_API_URL=http://laravel:8000
+    volumes:
+      - ./microservices:/app
+    depends_on:
+      - postgres
+      - redis
+      - celery_worker
+    networks:
+      - ajo_network
+    command: celery -A app.celery_app beat --loglevel=info
+
+  # Adminer (Database Management UI)
+  adminer:
+    image: adminer:latest
+    container_name: ajo_adminer
+    ports:
+      - "8082:8080"
+    environment:
+      - ADMINER_DEFAULT_SERVER=postgres
+    depends_on:
+      - postgres
+    networks:
+      - ajo_network
+
+  # Redis Commander (Redis Management UI)
+  redis_commander:
+    image: rediscommander/redis-commander:latest
+    container_name: ajo_redis_commander
+    ports:
+      - "8083:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379:0:password
+    depends_on:
+      - redis
+    networks:
+      - ajo_network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  laravel_storage:
+    driver: local
+
+networks:
+  ajo_network:
+    driver: bridge

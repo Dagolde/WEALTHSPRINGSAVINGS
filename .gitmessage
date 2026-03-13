@@ -1,0 +1,40 @@
+# <type>: <subject> (max 50 characters)
+
+# <body> (wrap at 72 characters)
+
+# <footer>
+
+# Type should be one of the following:
+# * feat: A new feature
+# * fix: A bug fix
+# * docs: Documentation only changes
+# * style: Changes that do not affect the meaning of the code
+# * refactor: A code change that neither fixes a bug nor adds a feature
+# * perf: A code change that improves performance
+# * test: Adding missing tests or correcting existing tests
+# * build: Changes that affect the build system or external dependencies
+# * ci: Changes to CI configuration files and scripts
+# * chore: Other changes that don't modify src or test files
+#
+# Subject line should:
+# - Use imperative mood ("Add feature" not "Added feature")
+# - Not capitalize first letter
+# - Not end with a period
+#
+# Body should:
+# - Explain what and why vs. how
+# - Wrap at 72 characters
+# - Separate from subject with blank line
+#
+# Footer should:
+# - Reference issues (e.g., "Closes #123", "Fixes #456")
+# - Note breaking changes (e.g., "BREAKING CHANGE: ...")
+#
+# Example:
+# feat: add user authentication endpoint
+#
+# Implement JWT-based authentication for user login.
+# Add validation for email and password fields.
+# Include rate limiting to prevent brute force attacks.
+#
+# Closes #42

@@ -1,0 +1,190 @@
+version: '3.8'
+
+services:
+  # Laravel Backend (Optimized)
+  laravel:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rotational_laravel
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=rotational_contribution
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=password
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=password
+      - CACHE_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+      - SESSION_DRIVER=redis
+      # Performance optimizations
+      - OPCACHE_ENABLE=1
+      - OPCACHE_MEMORY_CONSUMPTION=256
+      - OPCACHE_MAX_ACCELERATED_FILES=20000
+      - PHP_MEMORY_LIMIT=512M
+    volumes:
+      - ./backend:/var/www/html
+      - laravel_storage:/var/www/html/storage
+      - laravel_cache:/var/www/html/bootstrap/cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - rotational_network
+    command: php artisan serve --host=0.0.0.0 --port=8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Laravel Queue Worker (Single instance, optimized)
+  laravel_queue:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rotational_laravel_queue
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=rotational_contribution
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=password
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=password
+      - QUEUE_CONNECTION=redis
+    volumes:
+      - ./backend:/var/www/html
+    depends_on:
+      - postgres
+      - redis
+      - laravel
+    networks:
+      - rotational_network
+    command: php artisan queue:work --tries=3 --timeout=90 --sleep=3 --max-jobs=1000 --max-time=3600
+    restart: unless-stopped
+
+  # PostgreSQL Database (Optimized)
+  postgres:
+    image: postgres:14-alpine
+    container_name: rotational_postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=rotational_contribution
+      # Performance tuning
+      - POSTGRES_SHARED_BUFFERS=256MB
+      - POSTGRES_EFFECTIVE_CACHE_SIZE=1GB
+      - POSTGRES_MAINTENANCE_WORK_MEM=128MB
+      - POSTGRES_CHECKPOINT_COMPLETION_TARGET=0.9
+      - POSTGRES_WAL_BUFFERS=16MB
+      - POSTGRES_DEFAULT_STATISTICS_TARGET=100
+      - POSTGRES_RANDOM_PAGE_COST=1.1
+      - POSTGRES_EFFECTIVE_IO_CONCURRENCY=200
+      - POSTGRES_WORK_MEM=4MB
+      - POSTGRES_MIN_WAL_SIZE=1GB
+      - POSTGRES_MAX_WAL_SIZE=4GB
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+      -c maintenance_work_mem=128MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c work_mem=4MB
+      -c min_wal_size=1GB
+      -c max_wal_size=4GB
+      -c max_connections=100
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d rotational_contribution"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rotational_network
+    restart: unless-stopped
+
+  # Redis (Optimized)
+  redis:
+    image: redis:7-alpine
+    container_name: rotational_redis
+    command: >
+      redis-server
+      --requirepass password
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+      --appendonly yes
+      --appendfsync everysec
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - rotational_network
+    restart: unless-stopped
+
+  # Nginx (Optimized Reverse Proxy)
+  nginx:
+    image: nginx:alpine
+    container_name: rotational_nginx
+    ports:
+      - "8002:80"
+    volumes:
+      - ./nginx/nginx.optimized.conf:/etc/nginx/nginx.conf:ro
+      - ./backend/public:/var/www/html/public:ro
+      - nginx_cache:/var/cache/nginx
+    depends_on:
+      - laravel
+    networks:
+      - rotational_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  laravel_storage:
+    driver: local
+  laravel_cache:
+    driver: local
+  nginx_cache:
+    driver: local
+
+networks:
+  rotational_network:
+    driver: bridge
+
