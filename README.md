@@ -41,7 +41,7 @@ A comprehensive mobile and web application for managing rotational contribution 
 ## 📋 Prerequisites
 
 - PHP 8.2+
-- PostgreSQL 14+
+- MySQL 8.0+ (or PostgreSQL 14+)
 - Redis
 - Composer
 - Node.js & npm
@@ -51,7 +51,7 @@ A comprehensive mobile and web application for managing rotational contribution 
 ## 🛠️ Technology Stack
 
 - **Backend**: Laravel 10, PHP 8.2
-- **Database**: PostgreSQL 14+
+- **Database**: MySQL 8.0+ (or PostgreSQL 14+)
 - **Cache/Queue**: Redis
 - **Mobile**: Flutter 3.x
 - **Admin Dashboard**: HTML, CSS, JavaScript (Vanilla)
@@ -125,19 +125,22 @@ A comprehensive mobile and web application for managing rotational contribution 
 
 ### Production Deployment
 
-See [CLOUDPANEL_DEPLOYMENT_GUIDE.md](CLOUDPANEL_DEPLOYMENT_GUIDE.md) for detailed deployment instructions.
+See deployment guides based on your database choice:
+- **MySQL (Recommended)**: [CLOUDPANEL_MYSQL_DEPLOYMENT.md](CLOUDPANEL_MYSQL_DEPLOYMENT.md) - Uses CloudPanel's default MySQL
+- **PostgreSQL (Advanced)**: [CLOUDPANEL_DEPLOYMENT_GUIDE.md](CLOUDPANEL_DEPLOYMENT_GUIDE.md) - Requires PostgreSQL installation
 
 Quick deployment steps:
-1. Set up CloudPanel server with PostgreSQL
+1. Set up CloudPanel server with MySQL (default) or PostgreSQL
 2. Configure GitHub repository and secrets
 3. Push to main branch (auto-deploys via GitHub Actions)
 4. Or use manual deployment script: `.\deploy-from-local.ps1`
 
 ## 📚 Documentation
 
-- [CloudPanel Deployment Guide](CLOUDPANEL_DEPLOYMENT_GUIDE.md) - Complete deployment instructions
+- [CloudPanel MySQL Deployment](CLOUDPANEL_MYSQL_DEPLOYMENT.md) - **Recommended**: Uses CloudPanel's default MySQL
+- [CloudPanel Deployment Guide](CLOUDPANEL_DEPLOYMENT_GUIDE.md) - General guide (MySQL or PostgreSQL)
 - [CloudPanel Quick Start](CLOUDPANEL_QUICK_START.md) - Quick setup checklist
-- [PostgreSQL Setup](CLOUDPANEL_POSTGRESQL_SETUP.md) - Database configuration
+- [PostgreSQL Setup](CLOUDPANEL_POSTGRESQL_SETUP.md) - PostgreSQL-specific configuration
 - [GitHub Deployment Setup](GITHUB_DEPLOYMENT_SETUP.md) - CI/CD configuration
 - [Deployment Verification](CLOUDPANEL_DEPLOYMENT_VERIFICATION.md) - Testing and verification
 
@@ -149,7 +152,7 @@ Key environment variables (see `.env.cloudpanel` for full list):
 
 ```env
 APP_URL=https://yourdomain.com
-DB_CONNECTION=pgsql
+DB_CONNECTION=mysql
 DB_DATABASE=rotational_app
 DB_USERNAME=rotational_user
 DB_PASSWORD=your_password

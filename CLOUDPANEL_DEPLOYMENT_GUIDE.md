@@ -12,7 +12,7 @@ This guide will help you deploy the Rotational Contribution App (Laravel backend
 ## Architecture
 - **Backend**: Laravel 10 (PHP 8.2+)
 - **Admin Dashboard**: Static HTML/CSS/JS
-- **Database**: PostgreSQL 14+
+- **Database**: MySQL 8.0+ (CloudPanel default) or PostgreSQL 14+
 - **Cache**: Redis
 - **Queue**: Laravel Queue Worker
 - **Scheduler**: Laravel Scheduler (Cron)
@@ -32,7 +32,7 @@ CloudPanel usually includes these, but verify:
 ```
 php8.2-cli
 php8.2-fpm
-php8.2-pgsql
+php8.2-mysql (for MySQL) or php8.2-pgsql (for PostgreSQL)
 php8.2-mbstring
 php8.2-xml
 php8.2-bcmath
@@ -43,6 +43,8 @@ php8.2-redis
 php8.2-intl
 ```
 
+**Note**: This app works with both MySQL and PostgreSQL. MySQL is CloudPanel's default and recommended for easier setup.
+
 ---
 
 ## Part 2: CloudPanel Setup
@@ -50,11 +52,16 @@ php8.2-intl
 ### Step 1: Create Database
 1. Log into CloudPanel
 2. Go to **Databases** → **Add Database**
-3. Select **PostgreSQL** as database type
+3. Select database type:
+   - **MySQL** (Recommended - CloudPanel default, no additional setup)
+   - **PostgreSQL** (Advanced - requires separate installation)
 4. Create database:
    - **Database Name**: `rotational_app`
    - **Database User**: `rotational_user`
    - **Password**: Generate strong password (save it!)
+
+**For MySQL users**: See `CLOUDPANEL_MYSQL_DEPLOYMENT.md` for complete MySQL-specific guide.  
+**For PostgreSQL users**: See `CLOUDPANEL_POSTGRESQL_SETUP.md` for PostgreSQL installation.
 
 ### Step 2: Create Site
 1. Go to **Sites** → **Add Site**
@@ -123,12 +130,21 @@ APP_KEY=
 APP_DEBUG=false
 APP_URL=https://yourdomain.com
 
-DB_CONNECTION=pgsql
+# For MySQL (Recommended - CloudPanel default)
+DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
-DB_PORT=5432
+DB_PORT=3306
 DB_DATABASE=rotational_app
 DB_USERNAME=rotational_user
 DB_PASSWORD=your_database_password_here
+
+# For PostgreSQL (Alternative)
+# DB_CONNECTION=pgsql
+# DB_HOST=127.0.0.1
+# DB_PORT=5432
+# DB_DATABASE=rotational_app
+# DB_USERNAME=rotational_user
+# DB_PASSWORD=your_database_password_here
 
 CACHE_DRIVER=redis
 QUEUE_CONNECTION=redis
