@@ -35,6 +35,12 @@ jobs:
             # Pull latest code
             git pull origin main
             
+            # Clear composer cache to ensure fresh install
+            composer clear-cache
+            
+            # Remove vendor directory to force clean install
+            rm -rf vendor
+            
             # Install/Update Composer dependencies
             composer install --optimize-autoloader --no-dev --no-scripts
             
