@@ -63,7 +63,7 @@ fi
 
 # Step 4: Install/Update Composer dependencies
 print_info "Installing Composer dependencies..."
-composer install --optimize-autoloader --no-dev
+composer install --optimize-autoloader --no-dev --no-scripts
 print_success "Composer dependencies installed"
 
 # Step 5: Run database migrations

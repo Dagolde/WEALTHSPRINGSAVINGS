@@ -36,7 +36,7 @@ jobs:
             git pull origin main
             
             # Install/Update Composer dependencies
-            composer install --optimize-autoloader --no-dev
+            composer install --optimize-autoloader --no-dev --no-scripts
             
             # Run migrations
             php artisan migrate --force
