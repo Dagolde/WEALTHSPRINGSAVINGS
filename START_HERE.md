@@ -6,18 +6,25 @@ Welcome! Your Rotational Contribution App is ready for GitHub deployment with au
 
 ## ⚡ Quick Start (5 Minutes)
 
-### Step 1: Run the Setup Wizard
+### Step 1: Configure GitHub Secrets (REQUIRED FIRST!)
 
+Your code is already on GitHub, but automatic deployment needs configuration.
+
+**Run this script to check readiness:**
 ```powershell
-.\setup-github-deployment.ps1
+.\check-deployment-readiness.ps1
 ```
 
-This interactive wizard will:
-- Initialize Git repository
-- Help you connect to GitHub
-- Generate SSH keys for deployment
-- Guide you through GitHub Secrets setup
-- Push your code to GitHub
+This will help you:
+- Generate SSH keys (if needed)
+- Gather required information
+- Test SSH connection
+- Get values for GitHub Secrets
+
+**Then configure secrets at:**
+https://github.com/Dagolde/WEALTHSPRINGSAVINGS/settings/secrets/actions
+
+See detailed guide: `GITHUB_SECRETS_SETUP_GUIDE.md`
 
 ### Step 2: Configure Your Server
 
