@@ -30,8 +30,8 @@ class CheckDatabaseConnection extends Command
         $this->info('Checking database infrastructure...');
         $this->newLine();
 
-        // Check PostgreSQL connection
-        $this->checkPostgreSQL();
+        // Check database connection (MySQL or PostgreSQL)
+        $this->checkDatabase();
         $this->newLine();
 
         // Check Redis connection
@@ -43,20 +43,23 @@ class CheckDatabaseConnection extends Command
     }
 
     /**
-     * Check PostgreSQL database connection
+     * Check database connection
      */
-    private function checkPostgreSQL(): void
+    private function checkDatabase(): void
     {
-        $this->info('PostgreSQL Connection:');
+        $driver = config('database.default');
+        $connection = config("database.connections.{$driver}");
+        
+        $this->info(ucfirst($driver) . ' Connection:');
         
         try {
             // Test write connection
             DB::connection()->getPdo();
-            $writeHost = config('database.connections.pgsql.write.host')[0] ?? config('database.connections.pgsql.host');
+            $writeHost = $connection['write']['host'][0] ?? $connection['host'] ?? 'localhost';
             $this->line("  ✓ Write connection successful: {$writeHost}");
 
             // Test read connection (if configured)
-            $readHost = config('database.connections.pgsql.read.host')[0] ?? null;
+            $readHost = $connection['read']['host'][0] ?? null;
             if ($readHost && $readHost !== $writeHost) {
                 DB::connection()->getReadPdo();
                 $this->line("  ✓ Read connection successful: {$readHost}");
@@ -66,18 +69,29 @@ class CheckDatabaseConnection extends Command
             $dbName = DB::connection()->getDatabaseName();
             $this->line("  ✓ Database: {$dbName}");
 
-            // Test query
-            $result = DB::select('SELECT version()');
-            $version = $result[0]->version ?? 'Unknown';
-            $this->line("  ✓ PostgreSQL version: " . substr($version, 0, 50) . "...");
-
-            // Check active connections
-            $connections = DB::select("SELECT count(*) as count FROM pg_stat_activity WHERE datname = ?", [$dbName]);
-            $count = $connections[0]->count ?? 0;
-            $this->line("  ✓ Active connections: {$count}");
+            // Test query and get version
+            if ($driver === 'mysql') {
+                $result = DB::select('SELECT VERSION() as version');
+                $version = $result[0]->version ?? 'Unknown';
+                $this->line("  ✓ MySQL version: {$version}");
+                
+                // Check active connections
+                $connections = DB::select("SELECT count(*) as count FROM information_schema.processlist WHERE db = ?", [$dbName]);
+                $count = $connections[0]->count ?? 0;
+                $this->line("  ✓ Active connections: {$count}");
+            } elseif ($driver === 'pgsql') {
+                $result = DB::select('SELECT version()');
+                $version = $result[0]->version ?? 'Unknown';
+                $this->line("  ✓ PostgreSQL version: " . substr($version, 0, 50) . "...");
+                
+                // Check active connections
+                $connections = DB::select("SELECT count(*) as count FROM pg_stat_activity WHERE datname = ?", [$dbName]);
+                $count = $connections[0]->count ?? 0;
+                $this->line("  ✓ Active connections: {$count}");
+            }
 
         } catch (\Exception $e) {
-            $this->error("  ✗ PostgreSQL connection failed: " . $e->getMessage());
+            $this->error("  ✗ Database connection failed: " . $e->getMessage());
         }
     }
 
