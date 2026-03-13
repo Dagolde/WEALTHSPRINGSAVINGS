@@ -35,14 +35,18 @@ jobs:
             # Pull latest code
             git pull origin main
             
+            # Remove l5-swagger config file (dev-only package)
+            rm -f config/l5-swagger.php
+            
             # Clear composer cache to ensure fresh install
             composer clear-cache
             
             # Remove vendor directory to force clean install
             rm -rf vendor
             
-            # Install/Update Composer dependencies
+            # Install/Update Composer dependencies (dump autoload manually to skip scripts)
             composer install --optimize-autoloader --no-dev --no-scripts
+            composer dump-autoload --optimize --no-scripts
             
             # Run migrations
             php artisan migrate --force
